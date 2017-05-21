@@ -74,6 +74,16 @@ action :create do
     Chef::Log.warn("Go server not found on Chef server or not specifed via node['gocd']['agent']['go_server_url'] attribute, defaulting Go server to #{autoregister_values[:go_server_url]}")
   end
 
+  template '/usr/bin/go-agent-wait-ready' do
+    source 'go-agent-wait-ready'
+    cookbook 'gocd'
+    mode 0755
+    owner 'root'
+    group 'root'
+    action :create
+    only_if { platform?('ubuntu') && node['platform_version'].to_f >= 16.04 }
+  end
+
   case node['gocd']['agent']['type']
   when 'java'
     proof_of_registration = "#{workspace}/config/guid.txt"
@@ -84,12 +94,37 @@ action :create do
       cp /etc/init.d/go-agent /etc/init.d/#{agent_name}
       sed -i 's/# Provides: go-agent$/# Provides: #{agent_name}/g' /etc/init.d/#{agent_name}
       EOH
-      not_if "grep -q '# Provides: #{agent_name}$' /etc/init.d/#{agent_name}"
-      only_if { agent_name != 'go-agent' }
+      # this is NOT needed for systemd service
+      not_if { (platform?('ubuntu') && node['platform_version'].to_f >= 16.04) ||
+                agent_name == 'go-agent' ||
+                system("grep -q '# Provides: #{agent_name}$' /etc/init.d/#{agent_name}") }
     end
     link "/usr/share/#{agent_name}" do
       to '/usr/share/go-agent'
       not_if { agent_name == 'go-agent' }
+    end
+    template "#{agent_name}-systemd-service" do
+      path "/etc/systemd/system/#{agent_name}.service"
+      source 'go-agent.service.erb'
+      cookbook 'gocd'
+      mode 0644
+      owner 'root'
+      group 'root'
+      variables ({
+        service_name: agent_name
+      })
+      action :create
+      # this is needed for systemd service only
+      only_if { platform?('ubuntu') && node['platform_version'].to_f >= 16.04 }
+      notifies :run, 'execute[daemon-reload]', :immediately
+    end
+
+    execute 'daemon-reload' do
+      command "systemctl daemon-reload"
+      action :nothing
+      # this is needed for systemd service only
+      only_if { platform?('ubuntu') && node['platform_version'].to_f >= 16.04 }
+      notifies :restart, "service[#{agent_name}]", :delayed if node['gocd']['agent']['daemon']
     end
   when 'golang'
     proof_of_registration = "#{workspace}/config/agent-id"
