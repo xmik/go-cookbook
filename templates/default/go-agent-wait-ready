@@ -1,0 +1,20 @@
+#!/bin/bash
+
+which_go_agent="${1:-go-agent}"
+
+# Check every 0.5s, max 15s, that Go Agent is running
+i=0
+while [ $i -lt 30 ]; do
+  pgrep -u go -f /usr/share/${which_go_agent}/agent-bootstrapper.jar >/dev/null
+  # TODO: we should also be able to wait for agent.jar process so that
+  # the Go Agent service does not return prematurely, but now there is no
+  # way to distinguish between such process from e.g. go-agent-1 and go-agent-2
+  [ $? -eq 0 ] && break
+  ((i++))
+  sleep 0.5
+done
+if [ $i -eq 30 ]; then
+  echo "${which_go_agent} not running after 15s"
+  exit 1
+fi
+exit 0

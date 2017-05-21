@@ -1,0 +1,31 @@
+[Unit]
+Description=Go Agent
+Documentation=https://www.gocd.io/
+After=network-online.target
+Wants=network-online.target
+After=remote-fs.target
+Before=graphical.target
+Conflicts=shutdown.target
+
+[Service]
+# This is not needed, because /usr/share/go-agent/agent.sh sources it:
+# EnvironmentFile=/etc/default/<%= @service_name %>
+Restart=on-failure
+User=go
+# Even though all the /usr/share/*/agent.sh files are the same, use different
+# file for different go agent, so that we can see on `ps aux` which go agent
+# is running and which is not.
+ExecStart=/usr/share/<%= @service_name %>/agent.sh <%= @service_name %>
+# If the program daemonizes itself (i.e. forks), please use Type=forking.
+# The parent process is expected to exit when start-up is complete and all
+# communication channels are set up. The child continues to run as the main daemon process.
+# We set DAEMON=Y in /etc/default/<%= @service_name %>
+Type=forking
+PIDFile=/var/run/go-agent/<%= @service_name %>.pid
+GuessMainPID=no
+# Wait for go-agent to be running. If this fails, then main process will be
+# restarted, thanks to Restart=on-failure.
+ExecStartPost=/usr/bin/go-agent-wait-ready <%= @service_name %>
+
+[Install]
+WantedBy=default.target
