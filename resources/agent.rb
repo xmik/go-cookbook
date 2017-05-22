@@ -124,7 +124,7 @@ action :create do
       action :nothing
       # this is needed for systemd service only
       only_if { platform?('ubuntu') && node['platform_version'].to_f >= 16.04 }
-      notifies :restart, "service[#{agent_name}]", :delayed if node['gocd']['agent']['daemon']
+      notifies :restart, "service[#{agent_name}]", :delayed if (autoregister_values[:daemon] && !node['gocd']['agent']['never_notify_restart'])
     end
   when 'golang'
     proof_of_registration = "#{workspace}/config/agent-id"
@@ -146,7 +146,7 @@ action :create do
     mode '0644'
     owner 'root'
     group 'root'
-    notifies :restart, "service[#{agent_name}]" if autoregister_values[:daemon]
+    notifies :restart, "service[#{agent_name}]" if (autoregister_values[:daemon] && !node['gocd']['agent']['never_notify_restart'])
     variables autoregister_values
   end
 
@@ -161,7 +161,7 @@ action :create do
       elastic_agent_id new_resource.elastic_agent_id
       elastic_agent_plugin_id new_resource.elastic_agent_plugin_id
       not_if { ::File.exist? proof_of_registration }
-      notifies :restart, "service[#{agent_name}]" if autoregister_values[:daemon]
+      notifies :restart, "service[#{agent_name}]" if (autoregister_values[:daemon] && !node['gocd']['agent']['never_notify_restart'])
     end
   end
 

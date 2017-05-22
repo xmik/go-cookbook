@@ -33,5 +33,6 @@ default['gocd']['agent']['server_search_query'] = "chef_environment:#{node.chef_
 default['gocd']['agent']['workspace'] = nil # '/var/lib/go-agent' on linux
 default['gocd']['agent']['count'] = 1
 default['gocd']['agent']['default_extras'] = {}
+default['gocd']['agent']['never_notify_restart'] = false
 
 default['gocd']['agent']['golang']['version'] = '1.6'
