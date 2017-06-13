@@ -16,3 +16,4 @@ VNC=<%=     @vnc ? 'Y' : 'N' %>
 <% node['gocd']['agent']['default_extras'].each do |k, v| %>
 <%= k %>="<%= v %>"
 <% end %>
+<%= node['gocd']['agent']['extra_config'] %>
